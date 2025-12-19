@@ -1,21 +1,26 @@
+// src/App.tsx
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+
 import CustomerHome from './pages/CustomerHome';
 import CustomerForm from './pages/CustomerForm';
 import CustomerConfirmation from './pages/CustomerConfirmation';
+
 import AdminDashboard from './pages/AdminDashboard';
 import AdminOrderDetails from './pages/AdminOrderDetails';
-import { MOCK_ORDERS } from './constants';
 import AdminOrdersPage from './pages/AdminOrdersPage';
 import AdminEmployeesPage from './pages/AdminEmployeesPage';
 import AdminReportsPage from './pages/AdminReportsPage';
 import AdminSettingsPage from './pages/AdminSettingsPage';
 import AdminLogin from './pages/AdminLogin';
 
+import { MOCK_ORDERS } from './constants';
+
 // Admin kirish tekshiruvchi kichik komponent
-const RequireAdmin: React.FC<{ children: JSX.Element }> = ({ children }) => {
-  const isAuthed = typeof window !== 'undefined'
-    && localStorage.getItem('isAdminAuthed') === 'true';
+const RequireAdmin: React.FC<{ children: React.ReactElement }> = ({ children }) => {
+  const isAuthed =
+    typeof window !== 'undefined' &&
+    localStorage.getItem('isAdminAuthed') === 'true';
 
   if (!isAuthed) {
     return <Navigate to="/login" replace />;
