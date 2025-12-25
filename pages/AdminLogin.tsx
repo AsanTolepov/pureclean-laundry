@@ -1,6 +1,12 @@
+// pages/AdminLogin.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
+import { DEFAULT_ADMIN_PROFILE } from '../services/adminProfile';
+import {
+  findCompanyByLogin,
+  Company,
+} from '../services/companiesService';
 
 const AdminLogin: React.FC = () => {
   const [login, setLogin] = useState('');
@@ -8,15 +14,51 @@ const AdminLogin: React.FC = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
 
-    if (login === 'admin' && password === 'admin123') {
+    // 1) SUPER ADMIN
+    if (login === 'superadmin' && password === 'superadmin') {
+      localStorage.setItem('isSuperAdminAuthed', 'true');
+      localStorage.removeItem('isAdminAuthed');
+      localStorage.removeItem('currentCompanyId');
+      navigate('/superadmin');
+      return;
+    }
+
+    // 2) Korxona ADMINI (companies kolleksiyasi bo'yicha)
+    try {
+      const company: Company | null = await findCompanyByLogin(login);
+
+      if (!company || company.password !== password) {
+        setError("Login yoki parol noto‘g‘ri.");
+        return;
+      }
+
+      const now = new Date();
+      const from = new Date(company.validFrom);
+      const to = new Date(company.validTo);
+
+      if (!company.isEnabled || now < from || now > to) {
+        setError(
+          'Sizning obunangiz faol emas. Iltimos, loyiha egasi (superadmin) bilan bog‘laning.'
+        );
+        return;
+      }
+
+      // Hammasi joyida – currentCompanyId ni saqlaymiz
       localStorage.setItem('isAdminAuthed', 'true');
-      setError('');
+      localStorage.removeItem('isSuperAdminAuthed');
+      localStorage.setItem('currentCompanyId', company.id);
+      localStorage.setItem('currentCompanyName', company.name);
+
       navigate('/admin');
-    } else {
-      setError("Login yoki parol noto‘g‘ri. Iltimos, qaytadan urinib ko‘ring.");
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(
+        "Server bilan ulanishda xatolik. Iltimos, keyinroq yana urinib ko‘ring."
+      );
     }
   };
 
@@ -27,7 +69,7 @@ const AdminLogin: React.FC = () => {
           Admin panelga kirish
         </h2>
         <p className="text-sm text-slate-500 mb-6">
-          Faqat mas’ul xodimlar uchun. Login va parolni kiriting.
+          Har bir kir yuvish korxonasi uchun alohida login va parol.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -38,7 +80,7 @@ const AdminLogin: React.FC = () => {
             <input
               type="text"
               className="w-full border border-slate-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-sky-500 outline-none text-sm"
-              placeholder="admin"
+              placeholder="masalan: zuxra, anvar, ..."
               value={login}
               onChange={(e) => setLogin(e.target.value)}
             />
@@ -70,9 +112,17 @@ const AdminLogin: React.FC = () => {
             Kirish
           </button>
 
-          <p className="text-[11px] text-slate-400 mt-3">
-            Demo login ma’lumotlari: Login <b>admin</b>, Parol <b>admin123</b>.
-          </p>
+          <div className="mt-4 space-y-1 text-[11px] text-slate-400">
+            <p>
+              Super admin uchun login <b>superadmin</b>, parol{' '}
+              <b>superadmin</b>.
+            </p>
+            <p>
+              Default admin profil ma’lumotlari (faqat profil sahifasi uchun):
+              login <b>{DEFAULT_ADMIN_PROFILE.login}</b>, parol{' '}
+              <b>{DEFAULT_ADMIN_PROFILE.password}</b>.
+            </p>
+          </div>
         </form>
       </div>
     </Layout>

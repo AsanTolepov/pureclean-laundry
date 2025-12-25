@@ -1,23 +1,28 @@
-// src/App.tsx
-import React, { useEffect } from 'react';
+// App.tsx
+import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-import CustomerHome from './pages/CustomerHome';
 import CustomerForm from './pages/CustomerForm';
+import CustomerHome from './pages/CustomerHome';
 import CustomerConfirmation from './pages/CustomerConfirmation';
 
+import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
-import AdminOrderDetails from './pages/AdminOrderDetails';
 import AdminOrdersPage from './pages/AdminOrdersPage';
 import AdminEmployeesPage from './pages/AdminEmployeesPage';
+import AdminExpensesPage from './pages/AdminExpensesPage';
 import AdminReportsPage from './pages/AdminReportsPage';
+import AdminProfilePage from './pages/AdminProfilePage';
 import AdminSettingsPage from './pages/AdminSettingsPage';
-import AdminLogin from './pages/AdminLogin';
+import AdminOrderDetails from './pages/AdminOrderDetails';
+import AdminDailyReportPage from './pages/AdminDailyReportPage';
 
-import { MOCK_ORDERS } from './constants';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
 
-// Admin kirish tekshiruvchi kichik komponent
-const RequireAdmin: React.FC<{ children: React.ReactElement }> = ({ children }) => {
+// Oddiy admin uchun guard
+const RequireAdmin: React.FC<{ children: React.ReactElement }> = ({
+  children,
+}) => {
   const isAuthed =
     typeof window !== 'undefined' &&
     localStorage.getItem('isAdminAuthed') === 'true';
@@ -29,26 +34,39 @@ const RequireAdmin: React.FC<{ children: React.ReactElement }> = ({ children }) 
   return children;
 };
 
-const App: React.FC = () => {
-  useEffect(() => {
-    if (!localStorage.getItem('orders')) {
-      localStorage.setItem('orders', JSON.stringify(MOCK_ORDERS));
-    }
-  }, []);
+// Super admin uchun guard
+const RequireSuperAdmin: React.FC<{ children: React.ReactElement }> = ({
+  children,
+}) => {
+  const isAuthed =
+    typeof window !== 'undefined' &&
+    localStorage.getItem('isSuperAdminAuthed') === 'true';
 
+  if (!isAuthed) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
+
+const App: React.FC = () => {
   return (
     <HashRouter>
       <Routes>
-        {/* Mijozlar portali – to‘g‘ridan-to‘g‘ri forma */}
+        {/* Mijoz tomon */}
         <Route path="/" element={<CustomerForm />} />
         <Route path="/welcome" element={<CustomerHome />} />
         <Route path="/new-order" element={<CustomerForm />} />
+
+        {/* ❗ QR uchun companyId bilan maxsus route */}
+        <Route path="/c/:companyId/new-order" element={<CustomerForm />} />
+
         <Route path="/confirmation/:id" element={<CustomerConfirmation />} />
 
-        {/* Admin login sahifasi */}
+        {/* Admin login */}
         <Route path="/login" element={<AdminLogin />} />
 
-        {/* Admin portali – faqat login bo‘lsa kiradi */}
+        {/* Oddiy admin */}
         <Route
           path="/admin"
           element={
@@ -74,10 +92,26 @@ const App: React.FC = () => {
           }
         />
         <Route
+          path="/admin/expenses"
+          element={
+            <RequireAdmin>
+              <AdminExpensesPage />
+            </RequireAdmin>
+          }
+        />
+        <Route
           path="/admin/reports"
           element={
             <RequireAdmin>
               <AdminReportsPage />
+            </RequireAdmin>
+          }
+        />
+        <Route
+          path="/admin/profile"
+          element={
+            <RequireAdmin>
+              <AdminProfilePage />
             </RequireAdmin>
           }
         />
@@ -95,6 +129,24 @@ const App: React.FC = () => {
             <RequireAdmin>
               <AdminOrderDetails />
             </RequireAdmin>
+          }
+        />
+        <Route
+          path="/admin/daily/:date"
+          element={
+            <RequireAdmin>
+              <AdminDailyReportPage />
+            </RequireAdmin>
+          }
+        />
+
+        {/* Super admin */}
+        <Route
+          path="/superadmin"
+          element={
+            <RequireSuperAdmin>
+              <SuperAdminDashboard />
+            </RequireSuperAdmin>
           }
         />
 

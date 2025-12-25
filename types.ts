@@ -34,6 +34,7 @@ export interface Order {
   };
   status: OrderStatus;
   createdAt: string;
+  companyId?: string;
 }
 
 export interface AppState {

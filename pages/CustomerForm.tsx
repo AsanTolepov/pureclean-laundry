@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+// pages/CustomerForm.tsx
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { Order, OrderStatus } from '../types';
+import { createOrder } from '../services/ordersService';
 
 const CustomerForm: React.FC = () => {
   const navigate = useNavigate();
+  const { companyId } = useParams<{ companyId?: string }>();
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -15,37 +19,60 @@ const CustomerForm: React.FC = () => {
     pickupDate: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  // ❗ URL orqali companyId kelgan bo'lsa – localStorage.ga yozib qo'yamiz
+  useEffect(() => {
+    if (companyId) {
+      localStorage.setItem('currentCompanyId', companyId);
+    }
+  }, [companyId]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
+    setError('');
 
-    const newId = `PC-${Math.floor(1000 + Math.random() * 9000)}`;
-    const newOrder: Order = {
-      id: newId,
-      customer: {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone,
-      },
-      details: {
-        itemCount: formData.items,
-        serviceType: formData.service,
-        notes: formData.notes,
-        pickupDate: formData.pickupDate,
-        dateIn: new Date().toISOString(),
-      },
-      payment: {
-        total: 0, // Admin tomonidan keyin belgilanadi
-        advance: 0,
-        remaining: 0,
-      },
-      status: OrderStatus.NEW,
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const newId = `PC-${Math.floor(1000 + Math.random() * 9000)}`;
+      const nowIso = new Date().toISOString();
 
-    const existing = JSON.parse(localStorage.getItem('orders') || '[]');
-    localStorage.setItem('orders', JSON.stringify([newOrder, ...existing]));
+      const newOrder: Order = {
+        id: newId,
+        customer: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone,
+        },
+        details: {
+          itemCount: formData.items,
+          serviceType: formData.service,
+          notes: formData.notes || undefined,
+          pickupDate: formData.pickupDate || undefined,
+          dateIn: nowIso,
+        },
+        payment: {
+          total: 0,
+          advance: 0,
+          remaining: 0,
+        },
+        status: OrderStatus.NEW,
+        createdAt: nowIso,
+        // companyId bu yerda qo'yilmaydi, ordersService ichida localStorage'dan olinadi
+      };
 
-    navigate(`/confirmation/${newId}`);
+      await createOrder(newOrder);
+
+      navigate(`/confirmation/${newId}`);
+    } catch (err) {
+      console.error('Create order error:', err);
+      setError(
+        "Buyurtmani yaratishda xatolik yuz berdi. Iltimos, keyinroq yana urinib ko‘ring."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -60,7 +87,8 @@ const CustomerForm: React.FC = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="grid grid-cols-2 gap-4">
+        {/* Ism / Familiya */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Ism
@@ -93,6 +121,7 @@ const CustomerForm: React.FC = () => {
           </div>
         </div>
 
+        {/* Telefon */}
         <div className="space-y-1">
           <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
             Telefon raqami
@@ -109,6 +138,7 @@ const CustomerForm: React.FC = () => {
           />
         </div>
 
+        {/* Xizmat turi */}
         <div className="space-y-1">
           <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
             Xizmat turi
@@ -127,7 +157,8 @@ const CustomerForm: React.FC = () => {
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        {/* Buyumlar soni + olib ketish sanasi */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Buyumlar soni
@@ -160,6 +191,7 @@ const CustomerForm: React.FC = () => {
           </div>
         </div>
 
+        {/* Izoh */}
         <div className="space-y-1">
           <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
             Qo‘shimcha izoh (ixtiyoriy)
@@ -174,11 +206,18 @@ const CustomerForm: React.FC = () => {
           />
         </div>
 
+        {error && (
+          <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+            {error}
+          </p>
+        )}
+
         <button
           type="submit"
-          className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95 mt-4"
+          disabled={submitting}
+          className="w-full bg-sky-500 hover:bg-sky-600 disabled:opacity-60 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95 mt-4"
         >
-          Buyurtmani yuborish
+          {submitting ? 'Yuborilmoqda...' : 'Buyurtmani yuborish'}
         </button>
       </form>
     </Layout>
