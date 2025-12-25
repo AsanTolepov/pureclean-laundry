@@ -9,6 +9,7 @@ import {
   setDoc,
   updateDoc,
   where,
+  deleteDoc, // ❗ yangi
 } from 'firebase/firestore';
 import { cleanForFirestore } from './firestoreUtils';
 
@@ -16,16 +17,15 @@ const COLLECTION = 'companies';
 
 export interface Company {
   id: string;
-  name: string;        // "Zuxra Dj... kimyoviy tozalash"
-  login: string;       // masalan: "zuxra"
-  password: string;    // masalan: "zuxra123"
-  isEnabled: boolean;  // obuna yoqilganmi
-  validFrom: string;   // ISO: "2025-01-01T00:00:00.000Z"
-  validTo: string;     // ISO
-  createdAt: string;   // ISO
+  name: string;
+  login: string;
+  password: string;
+  isEnabled: boolean;
+  validFrom: string;
+  validTo: string;
+  createdAt: string;
 }
 
-// Hamma korxonalar (superadmin uchun)
 export async function fetchCompanies(): Promise<Company[]> {
   const snap = await getDocs(collection(db, COLLECTION));
   return snap.docs.map((d) => ({
@@ -34,7 +34,6 @@ export async function fetchCompanies(): Promise<Company[]> {
   }));
 }
 
-// Login bo‘yicha bitta korxonani topish
 export async function findCompanyByLogin(
   login: string
 ): Promise<Company | null> {
@@ -45,7 +44,6 @@ export async function findCompanyByLogin(
   return { id: d.id, ...(d.data() as Omit<Company, 'id'>) };
 }
 
-// ID bo‘yicha topish (Layout ichida obuna holatini tekshirish uchun)
 export async function fetchCompanyById(
   id: string
 ): Promise<Company | null> {
@@ -55,7 +53,6 @@ export async function fetchCompanyById(
   return { id: snap.id, ...(snap.data() as Omit<Company, 'id'>) };
 }
 
-// Yangi korxona yaratish (superadmin +)
 export async function createCompany(
   data: Omit<Company, 'id' | 'createdAt'>
 ): Promise<Company> {
@@ -78,11 +75,17 @@ export async function createCompany(
   return company;
 }
 
-// Korxonani yangilash (enable/disable, muddat va hokazo)
 export async function updateCompany(
   id: string,
   patch: Partial<Company>
 ): Promise<void> {
   const ref = doc(db, COLLECTION, id);
   await updateDoc(ref, cleanForFirestore(patch) as any);
+}
+
+// ❗ Korxonani o'chirish (faqat companies hujjatini o'chiradi)
+// Agar xohlasangiz keyin shu companyId bilan bog'liq orders/employees/expenses'larni ham o'chiradigan "deep delete" qilish mumkin.
+export async function deleteCompany(id: string): Promise<void> {
+  const ref = doc(db, COLLECTION, id);
+  await deleteDoc(ref);
 }

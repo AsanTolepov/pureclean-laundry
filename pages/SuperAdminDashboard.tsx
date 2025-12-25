@@ -7,6 +7,7 @@ import {
   fetchCompanies,
   createCompany,
   updateCompany,
+  deleteCompany,
 } from '../services/companiesService';
 
 interface NewCompanyForm {
@@ -99,6 +100,21 @@ const SuperAdminDashboard: React.FC = () => {
     setCompanies((prev) =>
       prev.map((c) => (c.id === company.id ? { ...c, isEnabled: next } : c))
     );
+  };
+
+  const handleDeleteCompany = async (company: Company) => {
+    const ok = window.confirm(
+      `"${company.name}" korxonasini o‘chirmoqchimisiz?`
+    );
+    if (!ok) return;
+
+    try {
+      await deleteCompany(company.id);
+      setCompanies((prev) => prev.filter((c) => c.id !== company.id));
+    } catch (err) {
+      console.error('Delete company error:', err);
+      alert("Korxonani o‘chirishda xatolik yuz berdi. Console'ni tekshiring.");
+    }
   };
 
   const formatDateShort = (iso: string) => {
@@ -280,26 +296,36 @@ const SuperAdminDashboard: React.FC = () => {
                     key={c.id}
                     className="bg-sky-50 text-slate-800 rounded-2xl shadow-sm border border-sky-200 flex flex-col p-4 text-xs gap-2"
                   >
-                    <div>
-                      <p className="font-bold text-[13px] leading-snug mb-1">
-                        {c.name}
-                      </p>
-                      <p className="text-[10px] text-slate-500">
-                        Login: <b>{c.login}</b> | Parol: <b>{c.password}</b>
-                      </p>
-                      <p className="text-[10px] text-slate-500">
-                        {formatDateShort(c.validFrom)} —{' '}
-                        {formatDateShort(c.validTo)}
-                      </p>
-                      <p
-                        className={
-                          active
-                            ? 'text-emerald-600 font-semibold'
-                            : 'text-rose-600 font-semibold'
-                        }
+                    <div className="flex justify-between items-start gap-2">
+                      <div>
+                        <p className="font-bold text-[13px] leading-snug mb-1">
+                          {c.name}
+                        </p>
+                        <p className="text-[10px] text-slate-500">
+                          Login: <b>{c.login}</b> | Parol: <b>{c.password}</b>
+                        </p>
+                        <p className="text-[10px] text-slate-500">
+                          {formatDateShort(c.validFrom)} —{' '}
+                          {formatDateShort(c.validTo)}
+                        </p>
+                        <p
+                          className={
+                            active
+                              ? 'text-emerald-600 font-semibold'
+                              : 'text-rose-600 font-semibold'
+                          }
+                        >
+                          {active ? 'Faol' : 'Faol emas'}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCompany(c)}
+                        className="text-[10px] text-rose-600 hover:underline"
                       >
-                        {active ? 'Faol' : 'Faol emas'}
-                      </p>
+                        🗑 Delete
+                      </button>
                     </div>
 
                     {orderUrl && (

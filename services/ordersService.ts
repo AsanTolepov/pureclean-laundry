@@ -6,7 +6,7 @@ import {
   getDoc,
   getDocs,
   query,
-  orderBy,
+  // orderBy,    // hozircha ishlatmaymiz
   where,
   setDoc,
   updateDoc,
@@ -25,16 +25,28 @@ function getCurrentCompanyId(): string | null {
 // Faqat shu korxonaga tegishli buyurtmalar
 export async function fetchOrders(): Promise<Order[]> {
   const companyId = getCurrentCompanyId();
-  if (!companyId) return [];
+  if (!companyId) {
+    console.warn('fetchOrders: currentCompanyId topilmadi');
+    return [];
+  }
 
+  // ❗ Hozircha faqat where() ishlatamiz, orderBy vaqtincha olib tashlandi
   const q = query(
     collection(db, COLLECTION),
-    where('companyId', '==', companyId),
-    orderBy('createdAt', 'desc')
+    where('companyId', '==', companyId)
   );
 
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data() as Order);
+  console.log('fetchOrders companyId =', companyId, 'docs:', snap.size);
+
+  const orders = snap.docs.map((d) => d.data() as Order);
+
+  // Ixtiyoriy: createdAt bo‘yicha clientda saralash (so‘ng getDocs natijasini sort qilamiz)
+  orders.sort((a, b) =>
+    (b.createdAt || '').localeCompare(a.createdAt || '')
+  );
+
+  return orders;
 }
 
 // Bitta buyurtma
@@ -47,13 +59,17 @@ export async function fetchOrderById(id: string): Promise<Order | null> {
   const companyId = getCurrentCompanyId();
 
   if (companyId && order.companyId && order.companyId !== companyId) {
+    console.warn(
+      'fetchOrderById: bu buyurtma boshqa korxona uchun, ko‘rsatilmaydi',
+      id
+    );
     return null;
   }
 
   return order;
 }
 
-// ❗ endi bu yerda companyId qo'shmaymiz – u allaqachon order ichida bor
+// ✅ companyId endi CustomerForm ichida qo‘yilmoqda – bu yerda qo‘shmaymiz
 export async function createOrder(order: Order): Promise<void> {
   const ref = doc(db, COLLECTION, order.id);
   const cleaned = cleanForFirestore(order);
