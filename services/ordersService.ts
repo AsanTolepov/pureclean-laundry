@@ -37,6 +37,7 @@ export async function fetchOrders(): Promise<Order[]> {
   return snap.docs.map((d) => d.data() as Order);
 }
 
+// Bitta buyurtma
 export async function fetchOrderById(id: string): Promise<Order | null> {
   const ref = doc(db, COLLECTION, id);
   const snap = await getDoc(ref);
@@ -45,7 +46,6 @@ export async function fetchOrderById(id: string): Promise<Order | null> {
   const order = snap.data() as Order;
   const companyId = getCurrentCompanyId();
 
-  // Boshqa korxonaning buyurtmasi bo'lsa, ko'rsatmaymiz
   if (companyId && order.companyId && order.companyId !== companyId) {
     return null;
   }
@@ -53,19 +53,11 @@ export async function fetchOrderById(id: string): Promise<Order | null> {
   return order;
 }
 
+// ❗ endi bu yerda companyId qo'shmaymiz – u allaqachon order ichida bor
 export async function createOrder(order: Order): Promise<void> {
-  const companyId = getCurrentCompanyId();
-  if (!companyId) {
-    throw new Error('currentCompanyId topilmadi (korxona tanlanmagan).');
-  }
-
   const ref = doc(db, COLLECTION, order.id);
-  const dataToSave = cleanForFirestore({
-    ...order,
-    companyId,
-  });
-
-  await setDoc(ref, dataToSave as any);
+  const cleaned = cleanForFirestore(order);
+  await setDoc(ref, cleaned as any);
 }
 
 export async function updateOrder(

@@ -22,7 +22,7 @@ const CustomerForm: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // ❗ URL orqali companyId kelgan bo'lsa – localStorage.ga yozib qo'yamiz
+  // QR orqali kirilganda companyId URL'da bo'ladi, localStorage ga yozib qo'yamiz
   useEffect(() => {
     if (companyId) {
       localStorage.setItem('currentCompanyId', companyId);
@@ -35,6 +35,21 @@ const CustomerForm: React.FC = () => {
     setError('');
 
     try {
+      // Ushbu formaning qaysi korxona uchun ekanini aniqlaymiz
+      const effectiveCompanyId =
+        companyId ||
+        (typeof window !== 'undefined'
+          ? localStorage.getItem('currentCompanyId') || ''
+          : '');
+
+      if (!effectiveCompanyId) {
+        setError(
+          'Bu buyurtma qaysi korxona uchun ekanligi aniqlanmadi. Iltimos, admin QR kodidan foydalaning yoki tizimdan chiqib qayta kiring.'
+        );
+        setSubmitting(false);
+        return;
+      }
+
       const newId = `PC-${Math.floor(1000 + Math.random() * 9000)}`;
       const nowIso = new Date().toISOString();
 
@@ -59,7 +74,8 @@ const CustomerForm: React.FC = () => {
         },
         status: OrderStatus.NEW,
         createdAt: nowIso,
-        // companyId bu yerda qo'yilmaydi, ordersService ichida localStorage'dan olinadi
+        // ❗ Eng muhim qator – bu buyurtma qaysi korxonaga tegishli
+        companyId: effectiveCompanyId,
       };
 
       await createOrder(newOrder);
@@ -87,7 +103,7 @@ const CustomerForm: React.FC = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Ism / Familiya */}
+        {/* Ism / familiya */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -112,7 +128,7 @@ const CustomerForm: React.FC = () => {
               required
               type="text"
               className="w-full border border-slate-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-sky-500 outline-none"
-              placeholder="Karimov"
+              placeholder="Tolepov"
               value={formData.lastName}
               onChange={(e) =>
                 setFormData({ ...formData, lastName: e.target.value })
