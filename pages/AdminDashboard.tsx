@@ -1,10 +1,8 @@
-// src/pages/AdminDashboard.tsx
+// pages/AdminDashboard.tsx
 import React, { useEffect, useState } from 'react';
 import { Layout } from '../components/Layout';
 import { Order, OrderStatus } from '../types';
 import { useNavigate } from 'react-router-dom';
-
-// Firebase servislar
 import { fetchOrders } from '../services/ordersService';
 import {
   fetchExpenses,
@@ -12,26 +10,26 @@ import {
 } from '../services/expensesService';
 
 interface DailyMetric {
-  dateKey: string; // YYYY-MM-DD
-  dateLabel: string; // 20-dek
+  dateKey: string;      // YYYY-MM-DD
+  dateLabel: string;    // 25-dek
   weekdayShort: string; // dsh, chs...
   newCount: number;
   washingCount: number;
   readyCount: number;
   deliveredCount: number;
-  revenue: number; // tushum
-  expense: number; // xarajat
-  profit: number; // foyda
+  revenue: number;
+  expense: number;
+  profit: number;
 }
 
 interface MonthOption {
-  key: string; // 2025-12
+  key: string;   // 2025-12
   year: number;
   month: number; // 0-11
   label: string; // dekabr 2025
 }
 
-// Oxirgi 30 kun bo‘yicha kunlik metrikalar (grafik va tepa kartalar uchun)
+// Oxirgi 30 kun bo‘yicha kunlik metrikalar
 function buildDailyMetricsLast30(
   orders: Order[],
   expenses: ExpenseRecord[]
@@ -51,15 +49,12 @@ function buildDailyMetricsLast30(
     const newCount = ordersForDay.filter(
       (o) => o.status === OrderStatus.NEW
     ).length;
-
     const washingCount = ordersForDay.filter(
       (o) => o.status === OrderStatus.WASHING
     ).length;
-
     const readyCount = ordersForDay.filter(
       (o) => o.status === OrderStatus.READY
     ).length;
-
     const deliveredCount = ordersForDay.filter(
       (o) => o.status === OrderStatus.DELIVERED
     ).length;
@@ -68,11 +63,9 @@ function buildDailyMetricsLast30(
       (sum, o) => sum + o.payment.total,
       0
     );
-
     const expenseForDay = expenses
       .filter((e) => e.date === dateKey)
       .reduce((sum, e) => sum + e.amount, 0);
-
     const profit = revenue - expenseForDay;
 
     result.push({
@@ -97,12 +90,12 @@ function buildDailyMetricsLast30(
   return result;
 }
 
-// Berilgan yil-oy bo‘yicha oy ichidagi KUNLIK metrikalar (jadval uchun)
+// Berilgan yil-oy uchun kunlik metrikalar (jadval)
 function buildDailyMetricsForMonth(
   orders: Order[],
   expenses: ExpenseRecord[],
   year: number,
-  month: number // 0-11
+  month: number
 ): DailyMetric[] {
   const result: DailyMetric[] = [];
   const d = new Date(year, month, 1);
@@ -117,15 +110,12 @@ function buildDailyMetricsForMonth(
     const newCount = ordersForDay.filter(
       (o) => o.status === OrderStatus.NEW
     ).length;
-
     const washingCount = ordersForDay.filter(
       (o) => o.status === OrderStatus.WASHING
     ).length;
-
     const readyCount = ordersForDay.filter(
       (o) => o.status === OrderStatus.READY
     ).length;
-
     const deliveredCount = ordersForDay.filter(
       (o) => o.status === OrderStatus.DELIVERED
     ).length;
@@ -134,11 +124,9 @@ function buildDailyMetricsForMonth(
       (sum, o) => sum + o.payment.total,
       0
     );
-
     const expenseForDay = expenses
       .filter((e) => e.date === dateKey)
       .reduce((sum, e) => sum + e.amount, 0);
-
     const profit = revenue - expenseForDay;
 
     result.push({
@@ -177,6 +165,7 @@ const AdminDashboard: React.FC = () => {
 
   const [monthOptions, setMonthOptions] = useState<MonthOption[]>([]);
   const [selectedMonthKey, setSelectedMonthKey] = useState<string>('');
+
   const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
@@ -184,12 +173,15 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const [o, e] = await Promise.all([fetchOrders(), fetchExpenses()]);
+        const [o, e] = await Promise.all([
+          fetchOrders(),
+          fetchExpenses(),
+        ]);
+
         setOrders(o);
         setExpenses(e);
         setDailyMetrics30(buildDailyMetricsLast30(o, e));
 
-        // Oxirgi 12 oy uchun oylar ro‘yxati (hozirgi oynidan boshlab)
         const now = new Date();
         const opts: MonthOption[] = [];
         for (let i = 0; i < 12; i++) {
@@ -211,11 +203,12 @@ const AdminDashboard: React.FC = () => {
         setLoading(false);
       }
     };
+
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 30 kunlik agregat – tepa kartalar, grafik, donut uchun
+  // 30 kunlik agregat
   const monthlyAgg = dailyMetrics30.reduce(
     (acc, d) => {
       acc.new += d.newCount;
@@ -246,7 +239,6 @@ const AdminDashboard: React.FC = () => {
       ? Math.round(totalProfit30 / dailyMetrics30.length)
       : 0;
 
-  // Line grafik – kunlik tushum (oxirgi 30 kun)
   const hasRevenueData = dailyMetrics30.some((d) => d.revenue > 0);
   const maxRevenue =
     dailyMetrics30.length > 0
@@ -272,7 +264,6 @@ const AdminDashboard: React.FC = () => {
     ? `0,${CHART_BOTTOM} ${revenuePoints} 100,${CHART_BOTTOM}`
     : '';
 
-  // Oxirgi nuqtaga label (grafik ustida)
   let lastRevenuePoint:
     | { x: number; y: number; value: number }
     | null = null;
@@ -287,7 +278,6 @@ const AdminDashboard: React.FC = () => {
     lastRevenuePoint = { x, y, value };
   }
 
-  // Donut (halqa) – statuslar taqsimoti (30 kunlik)
   const statusTotals = {
     new: monthlyAgg.new,
     washing: monthlyAgg.washing,
@@ -325,7 +315,7 @@ const AdminDashboard: React.FC = () => {
     percent: donutTotal ? Math.round((s.value / donutTotal) * 100) : 0,
   }));
 
-  const circumference = 2 * Math.PI * 16; // radius 16
+  const circumference = 2 * Math.PI * 16;
   let cumulativeOffset = 0;
   const donutArcs =
     donutTotal > 0
@@ -352,7 +342,6 @@ const AdminDashboard: React.FC = () => {
         })
       : null;
 
-  // Eng yaxshi kunlar (30 kunlik tushum va foyda bo‘yicha)
   const bestRevenueDay =
     dailyMetrics30.length > 0
       ? dailyMetrics30.reduce((best, d) =>
@@ -367,7 +356,6 @@ const AdminDashboard: React.FC = () => {
         )
       : null;
 
-  // === Tanlangan oy bo‘yicha KUNLIK TAFSILOTLAR (jadval) ===
   const selectedMonthOption = monthOptions.find(
     (m) => m.key === selectedMonthKey
   );
@@ -397,7 +385,6 @@ const AdminDashboard: React.FC = () => {
   return (
     <Layout title="Asosiy Menu" isAdmin>
       <div className="relative">
-        {/* Fon */}
         <div className="absolute top-0 left-0 right-0 h-40 bg-slate-50 -z-10" />
 
         <div className="px-8 pt-6 space-y-8">
@@ -419,7 +406,7 @@ const AdminDashboard: React.FC = () => {
             </div>
           ) : (
             <>
-              {/* 30 kunlik rangli kartalar */}
+              {/* Kartalar */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="bg-rose-500 text-white p-5 rounded-2xl shadow-sm flex flex-col justify-between">
                   <p className="text-xs opacity-80 mb-1">Yangi buyurtmalar</p>
@@ -462,9 +449,9 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Wallet Analytics + Traffic (donut) */}
+              {/* Wallet Analytics + Traffic */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Wallet Analytics – chiziqli grafik + 30 kunlik statistika */}
+                {/* Grafik */}
                 <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 p-6 md:p-8 shadow-sm">
                   <div className="flex justify-between items-center mb-4">
                     <div>
@@ -509,7 +496,6 @@ const AdminDashboard: React.FC = () => {
                             </linearGradient>
                           </defs>
 
-                          {/* Pastki bazaviy chiziq */}
                           <line
                             x1="0"
                             y1={CHART_BOTTOM}
@@ -519,7 +505,6 @@ const AdminDashboard: React.FC = () => {
                             strokeWidth="0.4"
                           />
 
-                          {/* Area */}
                           {revenueAreaPoints && (
                             <polygon
                               points={revenueAreaPoints}
@@ -528,7 +513,6 @@ const AdminDashboard: React.FC = () => {
                             />
                           )}
 
-                          {/* Yashil chiziq */}
                           <polyline
                             points={revenuePoints}
                             fill="none"
@@ -538,7 +522,6 @@ const AdminDashboard: React.FC = () => {
                             strokeLinejoin="round"
                           />
 
-                          {/* Nuqtalar */}
                           {dailyMetrics30.map((d, i) => {
                             const value = d.revenue;
                             const norm = value / maxRevenue;
@@ -556,7 +539,6 @@ const AdminDashboard: React.FC = () => {
                             );
                           })}
 
-                          {/* Oxirgi nuqtaga label */}
                           {lastRevenuePoint && lastRevenuePoint.value > 0 && (
                             <g>
                               <rect
@@ -582,7 +564,6 @@ const AdminDashboard: React.FC = () => {
                         </svg>
                       </div>
 
-                      {/* 30 kunlik moliyaviy statistika – grafik ostida */}
                       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs md:text-sm text-slate-600">
                         <div className="space-y-1">
                           <div className="flex justify-between">
@@ -634,7 +615,7 @@ const AdminDashboard: React.FC = () => {
                   )}
                 </div>
 
-                {/* Traffic – donut + foizlar + eng yaxshi kunlar */}
+                {/* Donut va eng yaxshi kunlar */}
                 <div className="bg-white rounded-3xl border border-slate-100 p-6 md:p-8 shadow-sm flex flex-col">
                   <h3 className="text-sm font-bold text-slate-800 mb-1">
                     Statuslar bo‘yicha ulush
@@ -731,7 +712,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Kunlik tafsilotlar jadvali – TANLANGAN OY bo‘yicha */}
+              {/* Kunlik tafsilotlar jadvali (tanlangan oy) */}
               <div className="bg-white rounded-3xl border border-slate-100 p-6 md:p-8 shadow-sm">
                 <div className="flex justify-between items-center mb-4">
                   <div>
@@ -743,7 +724,6 @@ const AdminDashboard: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* Oy tanlash */}
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-slate-400">Oy:</span>
                     <div className="relative">
