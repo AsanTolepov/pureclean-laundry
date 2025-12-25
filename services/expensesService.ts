@@ -6,7 +6,7 @@ import {
   getDocs,
   query,
   where,
-  orderBy,
+  // orderBy,    // hozircha ishlatmaymiz
   setDoc,
   deleteDoc,
 } from 'firebase/firestore';
@@ -30,17 +30,24 @@ function getCurrentCompanyId(): string | null {
   return localStorage.getItem('currentCompanyId');
 }
 
+// Faqat shu company uchun xarajatlar
 export async function fetchExpenses(): Promise<ExpenseRecord[]> {
   const companyId = getCurrentCompanyId();
   if (!companyId) return [];
 
+  // ❗ Endi faqat where, orderBy yo'q – index talab qilmaydi
   const q = query(
     collection(db, COLLECTION),
-    where('companyId', '==', companyId),
-    orderBy('date', 'desc')
+    where('companyId', '==', companyId)
   );
+
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data() as ExpenseRecord);
+  const items = snap.docs.map((d) => d.data() as ExpenseRecord);
+
+  // Agar sanalar bo‘yicha teskari tartib kerak bo‘lsa – client tomonda sort qilamiz
+  items.sort((a, b) => b.date.localeCompare(a.date));
+
+  return items;
 }
 
 export async function createExpense(
